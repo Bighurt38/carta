@@ -53,19 +53,22 @@ casacore::MFrequency::Types ProfileCASA::_determineRefFrame(
 Carta::Lib::Hooks::ProfileResult ProfileCASA::_generateProfile( casacore::ImageInterface < casacore::Float > * imagePtr,
         std::shared_ptr<Carta::Lib::Regions::RegionBase> regionInfo,
         Carta::Lib::ProfileInfo profileInfo ) const {
+
+    Carta::Lib::Hooks::ProfileResult profileResult;
     std::vector<std::pair<double,double> > profileData;
     casacore::CoordinateSystem cSys = imagePtr->coordinates();
     casacore::uInt spectralAxis = 0;
     if ( cSys.hasSpectralAxis()){
         spectralAxis = cSys.spectralAxisNumber();
     }
-    else {
+    else if ( cSys.findCoordinate(casacore::Coordinate::TABULAR) >= 0 ){
         int tabCoord = cSys.findCoordinate( casacore::Coordinate::TABULAR );
-        if ( tabCoord >= 0 ){
-            spectralAxis = tabCoord;
-        }
+        spectralAxis = tabCoord;
     }
-    Carta::Lib::Hooks::ProfileResult profileResult;
+    else {
+        qWarning() << "Please choose an image having spectral axes.";
+        return profileResult;
+    }
 
     //Get the requested rest frequency & unit
     double restFrequency = profileInfo.getRestFrequency();
