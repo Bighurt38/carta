@@ -40,6 +40,34 @@ void ProfileRenderService::_scheduleRender( std::shared_ptr<Layer> layer,
     if ( m_renderQueued ) {
         return;
     }
+
+    // This part are used to check whether the image is proper.
+    // (1) To trigger propiler, the image should be a RA-DEC-Channel/Tabular cube
+    //     or Linear-Linear-Channel/Tabular cube.
+    // (2) For a 4-dim cube, Stokes should be set up first.
+    // (3) The axes of gridline should be RA-DEC plane or Linear-Linear plane.
+    // The check of the spectral/tabular axis is in ProfileCASA.
+    auto xType = layer->_getAxisXType();
+    auto yType = layer->_getAxisYType();
+    bool isRADECPlane = false;
+    bool isDualLiPlane = false;
+    // check the plane.
+    if ( xType == Carta::Lib::AxisInfo::KnownType::DIRECTION_LON || xType == Carta::Lib::AxisInfo::KnownType::DIRECTION_LAT ){
+        if ( yType == Carta::Lib::AxisInfo::KnownType::DIRECTION_LON || yType == Carta::Lib::AxisInfo::KnownType::DIRECTION_LAT ){
+            isRADECPlane = true;
+        }
+    }
+    if (xType == Carta::Lib::AxisInfo::KnownType::LINEAR && yType == Carta::Lib::AxisInfo::KnownType::LINEAR ){
+        isDualLiPlane = true;
+    }
+    if ( !(isRADECPlane||isDualLiPlane) ){
+        qWarning() << "The displayed plane is not RA-DEC or Linear-Linear.";
+        Carta::Lib::Hooks::ProfileResult result;
+        ProfileRenderRequest request = m_requests.dequeue();
+        emit profileResult(result, request.getLayer(), request.getRegion(), request.isCreateNew() );
+        return;
+    }
+
     m_renderQueued = true;
 
 
@@ -87,4 +115,3 @@ ProfileRenderService::~ProfileRenderService(){
 }
 }
 }
-
